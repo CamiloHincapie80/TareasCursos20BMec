@@ -1,0 +1,9 @@
+# Fuentes y contraste externo — consulta 2026-11-15
+
+1. [Manual JPL Horizons](https://ssd.jpl.nasa.gov/horizons/manual.html): estados vectoriales geométricos, marcos, unidades y escalas temporales. La lectura de cabeceras locales determina la configuración realmente usada.
+2. [NASA NSSDCA: distancias y tiempos de máxima aproximación Voyager](https://nssdc.gsfc.nasa.gov/planetary/voyager-periapse.html): Voyager 2, Júpiter 1979-07-09 22:29:51 UTC, 10.11 radios de 71398 km; Saturno 1981-08-26 03:24:57 UTC, 2.67 radios de 60330 km. Son valores redondeados, no una efeméride para ajuste fino.
+3. [JPL: 45 años del lanzamiento de Voyager 2](https://www.jpl.nasa.gov/news/45-years-ago-voyager-2-begins-its-epic-journey-to-the-outer-planets-and-beyond/): cita distancia sobre las nubes, diferente de distancia al centro. No intercambiar ambas.
+4. [NASA: Voyager 2](https://science.nasa.gov/mission/voyager/voyager-2/): cronología de misión y referencia a una corrección posterior al encuentro joviano. No proporciona aquí vector/impulso para implementarla. Sus cifras narrativas de distancia no son uniformes con NSSDCA; se adopta la tabla explícita con definición de radios y UTC, conservando la discrepancia documental.
+5. Cabeceras locales de Voyager −32, revisión 2022-08-19: tramo 1977–1989 construido para aproximar acontecimientos mediante cónicas empalmadas. El ajuste de seguimiento, aceleraciones no gravitacionales y 24 maniobras descritos pertenecen al tramo 1989–2100. No hay incertidumbre estadística local del tramo usado.
+
+Para comparar tiempos: JD de los TXT es TDB. En julio de 1979 TDB−UTC es aproximadamente 50.184 s (TT−UTC=50.184 s más término periódico TDB−TT de milisegundos); en agosto de 1981 aproximadamente 52.184 s. El contraste externo usa estas correcciones solo a precisión de segundos. Los máximos no se certifican a ese nivel por la naturaleza de Voyager Horizons. No se han descargado efemérides nuevas ni SPICE de navegación.

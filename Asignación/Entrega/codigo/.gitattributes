@@ -1,0 +1,2 @@
+# Conservar los archivos de entrada de Horizons byte por byte para SHA-256.
+datos/horizons/*.txt -text -whitespace

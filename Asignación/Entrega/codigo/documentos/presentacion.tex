@@ -1,0 +1,226 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage{booktabs,tikz}
+\graphicspath{{resultados/figuras/}}
+\input{resultados/tablas/reporte-cifras.tex}
+\usetheme{default}
+\setbeamercolor{structure}{fg=blue!55!black}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\title{Asistencia gravitacional de Júpiter a Saturno}
+\subtitle{Reto III.3 de Mecánica Clásica}
+\author[Santiago Delgado y Angel Camilo Hincapie]{Santiago Delgado Cobos (2241400)\texorpdfstring{\\}{ y }Angel Camilo Hincapie Quintero (2241945)}
+\institute{Universidad Industrial de Santander}
+\date{hincapiec837@gmail.com}
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Qué significan K, N, P y P0}
+\small
+\begin{tabular}{@{}p{.07\linewidth}p{.43\linewidth}p{.41\linewidth}@{}}
+\toprule
+ & Qué se integra & Función en el reto\\
+\midrule
+K & Kepler: un solo atractor en cada región. & Aproximación por cónicas empalmadas.\\[3pt]
+N & Newton: Sol, Júpiter y Saturno a la vez, con posiciones de Horizons. & Referencia para medir el error de K.\\[3pt]
+P & Fuerzas de N. Se traslada el origen dentro de las esferas. & Comprueba el efecto numérico de cambiar de marco.\\[3pt]
+$P_0$ & Fuerzas de N fuera. Planeta y marea solar dentro, como en el cuaderno original. & Mide el efecto de una simplificación intermedia.\\
+\bottomrule
+\end{tabular}
+\medskip
+
+K y N bastan para la comparación principal. P comprueba su interpretación y P0 añade un diagnóstico. La $k$ minúscula del original es $GMm$. Al trabajar por unidad de masa se usa $\mu=GM$.
+\end{frame}
+
+\begin{frame}{De dónde salen los parámetros}
+\small
+\begin{tabular}{@{}p{.25\linewidth}p{.70\linewidth}@{}}
+\toprule
+Dato o parámetro & Origen y para qué sirve\\
+\midrule
+$\mu_i$, $\mathbf R_i$, $\dot{\mathbf R}_i$ & Los parámetros gravitacionales fijan las fuerzas. Las efemérides dan la posición y velocidad de los planetas para ubicarlos y cambiar de marco.\\[3pt]
+$r_{\rm SOI}$ y $f$ & El radio de Laplace fija el cruce en K. $f=1$ es el nominal. Variar $f$ sirve para medir sensibilidad.\\[3pt]
+$r_0,r_1,r_2$ & La altura de 500 km fija $r_0$. Los radios orbitales circulares $r_1,r_2$ fijan la elipse de Hohmann.\\[3pt]
+$v_\infty,r_p,\delta,b$ & $v_\infty$ sale de la velocidad relativa. El periapsis $r_p$ se elige en el diseño y se calcula en K. El giro $\delta$ determina la salida. $b$ describe la geometría.\\[3pt]
+Fase y umbral & Se ajusta la fase circular para llegar a Saturno. El umbral de 1000 km sirve solo para evaluar la diferencia entre los modelos.\\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+\begin{frame}{Hohmann fija el estado de llegada a Júpiter}
+\begin{columns}[T]
+\column{.44\textwidth}
+\centering\includegraphics[width=\linewidth,height=.57\textheight,keepaspectratio]{01_hohmann.pdf}
+\column{.53\textwidth}
+Perihelio en la Tierra, afelio en Júpiter. Sus radios fijan la elipse.
+\[
+a_t=\frac{r_1+r_2}{2},\quad
+v_t^2=\mu_\odot\left(\frac2r-\frac1{a_t}\right).
+\]
+Vuelo de \DiasHohmann{} días. Júpiter parte $97{,}16^\circ$ por delante.
+\[
+v_{\infty,\oplus}=v_{t1}-v_1=8{,}793\;\text{km/s}.
+\]
+Desde la órbita baja de 500 km, $v_0$ es la rapidez circular y $\Delta v_0=\sqrt{v_{\infty,\oplus}^2+2v_0^2}-v_0=\ImpulsoLEO$ km/s.
+\end{columns}
+\vfill
+{\scriptsize Ecuaciones originales de elipse, vis-viva y escape terrestre en \texttt{hohmann\_jupiter.tex}.}
+\end{frame}
+
+\begin{frame}{La hipérbola joviana determina el giro}
+La sonda llega a $7{,}413$ km/s y Júpiter se mueve a $13{,}057$ km/s, ambos en sentido prógrado. La entrada relativa es retrógrada y $v_{\infty,J}=\ExcesoJoviano$ km/s.
+\[
+\varepsilon_J=\tfrac12v_{\infty,J}^2,\qquad
+a_h=\frac{\mu_J}{v_{\infty,J}^2},\qquad |\mathbf h_J|=b\,v_{\infty,J}.
+\]
+\[
+r_{p,J}=a_h(e_J-1),\qquad b=a_h\sqrt{e_J^2-1},\qquad
+\delta=2\arcsin(1/e_J).
+\]
+Elegimos $r_{p,J}=10R_J$. Resultan $e_J=1{,}180$, $b=2{,}49$ millones de km y $\delta=\GiroJoviano^\circ$. $b$ mide la distancia perpendicular desde el centro a la asíntota entrante. Un mayor periapsis reduce el giro.
+\vfill
+{\scriptsize Relaciones de la hipérbola del original \texttt{hohmann\_jupiter.tex}.}
+\end{frame}
+
+\begin{frame}{La rotación cambia la energía respecto al Sol}
+\begin{columns}[T]
+\column{.53\textwidth}
+Componentes radial y tangencial, en km/s.
+\[
+\begin{aligned}
+\mathbf u_{\rm ent}&=(0,-5{,}643),\\
+\mathbf u_{\rm sal}&=(5{,}076,2{,}466),\\
+\mathbf V_J+\mathbf u_{\rm sal}&=(5{,}076,15{,}523).
+\end{aligned}
+\]
+Las velocidades relativas tienen igual módulo. La energía solar aumenta en
+\[
+\Delta\varepsilon_\odot=\mathbf V_J\cdot
+(\mathbf u_{\rm sal}-\mathbf u_{\rm ent})
+=\EnergiaGanada\;\text{km}^2/\text{s}^2.
+\]
+\column{.43\textwidth}
+\centering
+\begin{tikzpicture}[scale=.67,>=stealth]
+\draw[->,gray] (-.55,0)--(4.4,0) node[right,black] {$\hat{\mathbf r}$};
+\draw[->,gray] (0,-2.5)--(0,3.1) node[above,black] {$\hat{\boldsymbol\theta}$};
+\draw[->,very thick,blue!75!black] (0,0)--(0,-1.9) node[below left] {$\mathbf u_{\rm ent}$};
+\draw[->,very thick,red!75!black] (0,0)--(1.71,.83) node[right] {$\mathbf u_{\rm sal}$};
+\draw[->,red!75!black] (0,-.65) arc (-90:26:.65);
+\node at (1,-.65) {$\delta$};
+\end{tikzpicture}
+\par\small Vectores relativos a Júpiter. El giro elegido da una componente radial saliente.
+\end{columns}
+\end{frame}
+
+\begin{frame}{Del giro instantáneo al sobrevuelo de Saturno}
+\begin{columns}[T]
+\column{.54\textwidth}
+La construcción asintótica aplica el giro en la posición orbital de Júpiter y en un solo instante. Desde ese estado se integran Sol y Saturno.
+\medskip
+
+Se ajusta la fase de Saturno a $24{,}92^\circ$ al paso por Júpiter. El mínimo es de \MinimoDiseno{} km tras \DiasDiseno{} días de vuelo desde Júpiter.
+\column{.43\textwidth}
+\centering\includegraphics[width=\linewidth,height=.55\textheight,keepaspectratio]{10_sobrevuelo_saturno.pdf}
+\par\small Aproximación y salida en coordenadas centradas en Saturno.
+\end{columns}
+\end{frame}
+
+\begin{frame}{Esferas: el encuentro se integra entre dos cruces}
+\begin{columns}[T]
+\column{.50\textwidth}
+\centering
+\begin{tikzpicture}[scale=.70,>=stealth]
+\draw[dashed,blue!60!black] (4,0) circle (1.3);
+\node[font=\scriptsize,blue!60!black] at (4,1.6) {$|\boldsymbol\rho_J|=r_{\rm SOI}$};
+\fill (4,0) circle (.06) node[below right,font=\scriptsize]{Júpiter};
+\draw[very thick,gray] (.2,-2.6) .. controls (1.8,-2.2) .. (3.08,-.92);
+\draw[very thick,blue!70!black] (3.08,-.92) .. controls (3.4,-.2) and (3.9,.7) .. (4.65,1.126);
+\draw[very thick,gray,->] (4.65,1.126)--(5.85,2.2);
+\fill (3.08,-.92) circle (.055) node[below,font=\scriptsize]{entrada $t_{\rm in}$};
+\fill (4.65,1.126) circle (.055) node[right,font=\scriptsize]{salida $t_{\rm out}$};
+\node[font=\scriptsize] at (1.1,-1.55) {tramo solar};
+\end{tikzpicture}
+\par\small Esquema de cruces adaptado de \texttt{esferas\_influencia.tex}.
+\column{.47\textwidth}
+\[
+r_{\rm SOI,i}(t)=f|\mathbf R_i(t)|
+\left(\frac{\mu_i}{\mu_\odot}\right)^{2/5}.
+\]
+\small Entrada. Se restan $\mathbf R_i$ y $\dot{\mathbf R}_i$ al estado solar. Con el estado relativo se integra la cónica del planeta.
+\medskip
+
+Salida. Se suman $\mathbf R_i$ y $\dot{\mathbf R}_i$ en la fecha del cruce saliente. El estado físico es continuo.
+\end{columns}
+\end{frame}
+
+\begin{frame}{Los lagrangianos del cuaderno y las tres variantes}
+\small
+Fuera de las esferas, el cuaderno añade a la cónica solar los potenciales directo e indirecto de cada planeta:
+\[
+\mathcal L_\odot=\tfrac12|\dot{\mathbf r}|^2+\frac{\mu_\odot}{r}
++\sum_{i=J,S}\mu_i\left[\frac1{|\mathbf r-\mathbf R_i|}
+-\frac{\mathbf r\cdot\mathbf R_i}{R_i^3}\right].
+\]
+Dentro de la esfera, el corchete planetocéntrico genera la marea solar:
+\[
+\mathcal L_i^{(P0)}=\tfrac12|\mathbf u|^2+\frac{\mu_i}{\rho_i}
++\mu_\odot\left[\frac1{|\mathbf R_i+\boldsymbol\rho_i|}
++\frac{\mathbf R_i\cdot\boldsymbol\rho_i}{R_i^3}\right].
+\]
+\begin{itemize}
+\item K quita los corchetes. Queda un atractor por región.
+\item P0 retiene los corchetes del cuaderno y cambia de marco en la esfera.
+\item N integra la ecuación de $\mathcal L_\odot$ en el marco solar. P conserva su dinámica al trasladarla: $\ddot{\boldsymbol\rho}_i=\ddot{\mathbf r}-\ddot{\mathbf R}_i$.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Qué fija cada modelo y qué se compara}
+\small
+\begin{tabular}{@{}p{.18\linewidth}p{.37\linewidth}p{.36\linewidth}@{}}
+\toprule
+& Hohmann + dispersión & Esferas de influencia (K)\\
+\midrule
+Antes de Júpiter & Elipse tangente fija $v_{\infty,J}$. & El cruce entrante fija posición y velocidad finitas.\\[3pt]
+En Júpiter & Se elige $r_{p,J}$ y se gira $\mathbf u$ en un instante. & $r_{p,J}$ y la duración resultan de integrar la cónica local.\\[3pt]
+Hacia Saturno & El diseño propaga Sol y Saturno a partir del giro. & Sol entre esferas. Saturno actúa al entrar en su esfera.\\
+\bottomrule
+\end{tabular}
+\medskip
+
+Para medir el error de K, copiamos el estado de N en cada entrada joviana. Con $f=1$ la esfera tiene $49{,}20$ millones de km al entrar. K tarda unos 132 días en salir y queda fuera de la esfera de Saturno.
+\end{frame}
+
+\begin{frame}{El error depende del radio de empalme}
+\centering
+\begin{tabular}{rrrr}
+\toprule
+Factor $f$ & P (km) & P0 (km) & K (km)\\
+\midrule
+\input{resultados/tablas/reporte-frontera.tex}
+\end{tabular}
+\par\medskip
+\raggedright
+Diferencias respecto a N. P0 conserva la fuerza del planeta y la marea solar dentro de cada esfera. Con un umbral de 1000 km, P cumple en todos los casos. Las cónicas con radio nominal pasan fuera de la esfera de Saturno.
+\end{frame}
+
+\begin{frame}{Qué respaldan las verificaciones}
+\begin{itemize}
+\item Una integración independiente reproduce la dispersión hiperbólica analítica. En K, la energía jovicéntrica varía numéricamente del orden de $10^{-10}$ en términos relativos.
+\item Al reducir el paso y las tolerancias, el residuo en posición P--N al final baja de 7045 a 6,30 km.
+\item NASA publica 161\,081 km para Voyager 2 en Saturno. La interpolación diaria da 151\,408 km y N predice 4,34 millones de km.
+\end{itemize}
+\medskip
+Cerca del periapsis de Júpiter domina la fuerza central. El error de omitir perturbaciones cerca de la frontera se amplifica en el viaje a Saturno.
+\end{frame}
+
+\begin{frame}{Diseño con efemérides y alcance}
+Ajustamos K y N por separado para apuntar a un lugar desplazado un millón de km del centro de Saturno. Los mínimos resultantes son de unos 982\,452 y 983\,201 km, respectivamente. Sus épocas difieren en casi 16 días.
+\medskip
+
+La prueba con el mismo estado de entrada mide el error de la aproximación. El ajuste independiente muestra que ambos modelos permiten diseñar un sobrevuelo bajo sus propias hipótesis.
+\medskip
+
+\footnotesize Fuentes. Efemérides JPL Horizons y distancias históricas NASA NSSDCA. El repositorio contiene código, datos y pruebas. La bitácora documenta las intervenciones de IA.
+\end{frame}
+\end{document}

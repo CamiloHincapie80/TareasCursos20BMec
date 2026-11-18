@@ -1,0 +1,38 @@
+.venv/
+__pycache__/
+*.aux
+*.log
+*.out
+
+# Entornos, pruebas y compilación locales
+venv/
+.env
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.coverage
+core
+core.[0-9]*
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.bbl
+*.blg
+/.agents/
+/.aws/
+/.codex/
+
+# Productos reproducibles
+/datos/procesados/
+/resultados/
+/documentos/RESUMEN_RESULTADOS.md
+/documentos/SATURNO.md
+
+# Plantilla de consulta y materiales de trabajo archivados localmente
+/ModeloReporteUIS.pdf
+/originales/
+/documentos/MANIFIESTO_ORIGINALES.json
+/documentos/material_reporte.*
+/documentos/informe_voyager_saturno.*
+/documentos/distancias_saturno_comparacion.pdf
