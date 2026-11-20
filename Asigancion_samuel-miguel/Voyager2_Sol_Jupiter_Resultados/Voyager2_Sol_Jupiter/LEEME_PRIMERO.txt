@@ -1,0 +1,6 @@
+RETO III.3 · SOL, JÚPITER Y VOYAGER 2
+1. Abre 00_ABRIR_RESULTADOS.html en un navegador.
+2. Sobrevuelo centrado en Júpiter: 13_sobrevuelo_jupiter_centrado.html
+3. Vista heliocéntrica: 12_trayectoria_heliocentrica_sin_saturno.html
+4. Para Overleaf: sube Informe_Reto_III3_Sol_Jupiter_Voyager2.tex y la carpeta figuras/
+5. El archivo de entrada de Saturno NO se usa. 9.58 UA es un radio geométrico.

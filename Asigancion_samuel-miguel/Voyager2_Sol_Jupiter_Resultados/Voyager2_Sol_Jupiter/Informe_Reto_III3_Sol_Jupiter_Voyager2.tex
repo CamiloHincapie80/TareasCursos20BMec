@@ -1,0 +1,582 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{geometry}
+\usepackage{booktabs,tabularx,array,longtable}
+\usepackage{graphicx,float,subcaption}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\geometry{margin=2.35cm,headheight=15pt}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Reto III.3: asistencia gravitacional}
+\fancyhead[R]{Sol--Júpiter--Voyager 2}
+\fancyfoot[C]{\thepage}
+\setlength{\parskip}{.45em}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{topsep=3pt,itemsep=2pt}
+\definecolor{codebg}{RGB}{244,247,250}
+\definecolor{codeblue}{RGB}{20,65,112}
+\lstdefinestyle{python}{language=Python,basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codeblue}\bfseries,commentstyle=\color{teal!60!black},
+  stringstyle=\color{orange!65!black},breaklines=true,
+  backgroundcolor=\color{codebg},frame=single,showstringspaces=false,
+  numbers=left,numberstyle=\tiny\color{gray},xleftmargin=1.2em,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {ü}{{\"u}}1}
+\lstset{style=python}
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\dif}{\mathop{}\!\mathrm{d}}
+\newcommand{\SOI}{R_{\mathrm{SOI}}}
+\newcommand{\muS}{\mu_\odot}
+\newcommand{\muJ}{\mu_{J}}
+\newcommand{\rJ}{\vect r_{J}}
+\newcommand{\vJ}{\vect v_{J}}
+\newcommand{\rV}{\vect r}
+\newcommand{\vV}{\vect v}
+\newcommand{\fign}[3]{\begin{figure}[htbp]\centering\IfFileExists{figuras/#1}{\includegraphics[width=#2\textwidth]{figuras/#1}}{\fbox{\parbox{.85\textwidth}{Archivo opcional: \texttt{figuras/#1}}}}\caption{#3}\end{figure}}
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Large Mecánica clásica y física computacional\par}
+\vspace{1.2cm}
+{\Huge\bfseries Reto III.3\par}
+\vspace{.5cm}
+{\LARGE Diseño y validación de una asistencia gravitacional\par}
+\vspace{.65cm}
+{\Large Caso histórico: Voyager 2 en Júpiter (1979)\par}
+\vspace{1.1cm}
+\rule{.8\textwidth}{.6pt}\par
+\vspace{.5cm}
+{\large\bfseries Sistema dinámico: Sol, Júpiter y sonda\par}
+{\normalsize Dos aproximaciones: cónicas empalmadas e integración gravitacional\par}
+\vspace{1.4cm}
+\begin{minipage}{.83\textwidth}
+\textbf{Alcance:} se prescriben las efemérides heliocéntricas de Júpiter y se considera la sonda de masa despreciable. El radio $9.58\,\mathrm{UA}$ sirve solo como referencia geométrica de salida hacia la región de Saturno; \emph{no se incluyen efemérides ni aceleración gravitatoria de Saturno}.
+\end{minipage}
+\vfill
+{\large Documento metodológico y resultados reproducibles\par}
+{\large Noviembre de 2026\par}
+\end{titlepage}
+\tableofcontents
+\newpage
+
+\section{Resumen, problema y objetivos}
+El propósito es reconstruir el sobrevuelo de la sonda Voyager 2 por Júpiter mediante las efemérides de JPL Horizons, modelar la desviación gravitatoria y demostrar cómo cambia su trayectoria en el sistema heliocéntrico. Se comparan dos descripciones que comparten exactamente la misma condición inicial de entrada: (i) una integración de dos cuerpos alrededor de Júpiter limitada por una esfera de influencia, unida a arcos heliocéntricos keplerianos, y (ii) una propagación restringida con la acción simultánea del Sol y Júpiter.
+
+\textbf{Objetivo físico:} determinar qué energía y qué momento angular se conservan, en qué referencia y bajo qué hipótesis. \textbf{Objetivo numérico:} cuantificar el error de la aproximación de cónicas empalmadas y su dependencia del radio de cambio de modelo. \textbf{Objetivo geométrico:} establecer si, después del sobrevuelo, la sonda cruza el radio heliocéntrico $R_{\mathrm{obj}}=9.58\,\mathrm{UA}$. Esto último es una condición necesaria de alcance radial, \emph{no una predicción de encuentro con Saturno}.
+
+\section{Marco teórico}
+\subsection{Sistema de referencia, notación y unidades}
+Trabajamos en coordenadas heliocéntricas eclípticas J2000 del archivo Horizons, con posiciones en $\mathrm{km}$, velocidades en $\mathrm{km\,s^{-1}}$, tiempos en segundos y época astronómica TDB. Denotamos con $\rV(t)$ y $\vV(t)$ el estado de Voyager y con $\rJ(t)$ y $\vJ(t)$ el de Júpiter, ambos respecto del Sol. La masa de la sonda es despreciable frente a las masas de los primarios.
+
+Definimos el estado relativo jovicéntrico por
+\begin{equation}\label{eq:rel}
+\vect\rho=\rV-\rJ,\qquad \vect w=\vV-\vJ,
+\qquad \rho=\lVert\vect\rho\rVert.
+\end{equation}
+La ecuación~\eqref{eq:rel} es una traslación galileana instantánea de posiciones y velocidades. El sistema centrado en Júpiter, al acelerarse con su movimiento orbital, \emph{no es inercial} durante un intervalo largo. Por tanto no debe aplicarse directamente la ecuación jovicéntrica pura cuando se quieren incluir todas las fuerzas.
+
+En el código se emplean:
+\begin{align*}
+\muS &= 1.32712440018\times 10^{11}\ \mathrm{km^3\,s^{-2}},\\
+\muJ &= 1.26686534\times 10^{8}\ \mathrm{km^3\,s^{-2}},\\
+1\ \mathrm{UA}&=149\,597\,870.7\ \mathrm{km},\qquad 1\ \mathrm{día}=86\,400\ \mathrm{s},\\
+a_J&=778.57\times10^6\ \mathrm{km},\\
+M_\odot &= 1.98847\times10^{30}\ \mathrm{kg},\qquad M_J=1.89813\times10^{27}\ \mathrm{kg}.
+\end{align*}
+Se utilizan valores constantes para los parámetros gravitacionales y un semieje mayor representativo de Júpiter. Las efemérides no se sustituyen por órbitas circulares al calcular la trayectoria nominal.
+
+\subsection{Problema de dos cuerpos en un campo central}
+Para la posición relativa a un cuerpo de parámetro gravitacional $\mu=GM$, el modelo kepleriano satisface
+\begin{equation}\label{eq:kepler}
+\ddot{\vect r}=-\frac{\mu}{r^3}\vect r,\qquad
+\vect F=-\frac{GMm}{r^3}\vect r.
+\end{equation}
+La fuerza es central: siempre paralela a $\vect r$. La energía específica (energía por unidad de masa de la sonda) es
+\begin{equation}\label{eq:energy}
+\varepsilon=\frac{\dot{\vect r}\cdot\dot{\vect r}}2-\frac{\mu}{r}.
+\end{equation}
+Derivando respecto al tiempo,
+\begin{align}
+\frac{\dif\varepsilon}{\dif t}
+ &=\dot{\vect r}\cdot\ddot{\vect r}+\mu\frac{\vect r\cdot\dot{\vect r}}{r^3}\\
+ &=\dot{\vect r}\cdot\left(-\frac\mu{r^3}\vect r\right)
+ +\mu\frac{\vect r\cdot\dot{\vect r}}{r^3}=0.
+\end{align}
+En consecuencia, $\varepsilon$ es constante en un problema de dos cuerpos autónomo. El momento angular específico es el \emph{vector}
+\begin{equation}\label{eq:h}
+\vect h=\vect r\times\dot{\vect r}.
+\end{equation}
+Su derivada es
+\begin{equation}
+\dot{\vect h}=\dot{\vect r}\times\dot{\vect r}+
+\vect r\times\ddot{\vect r}=\vect 0,
+\end{equation}
+porque $\ddot{\vect r}$ es paralelo a $\vect r$. La conservación \emph{vectorial} fija el plano orbital, no solamente el módulo $h=\lVert\vect h\rVert$.
+
+\subsection{Energía, excentricidad y elementos osculatrices}
+El vector de excentricidad es
+\begin{equation}
+\vect e=\frac{\vect v\times\vect h}{\mu}-\frac{\vect r}{r},
+\qquad e=\lVert\vect e\rVert.
+\end{equation}
+La integración del problema central conduce a la ecuación polar de una cónica
+\begin{equation}\label{eq:conic}
+r(\nu)=\frac{p}{1+e\cos\nu},\qquad p=\frac{h^2}{\mu}.
+\end{equation}
+La energía determina el semieje mayor
+\begin{equation}
+\varepsilon=-\frac{\mu}{2a},\qquad a=-\frac{\mu}{2\varepsilon}.
+\end{equation}
+Para $\varepsilon<0$ la órbita es elíptica ($a>0$), con afelio $r_a=a(1+e)$. Si $\varepsilon>0$, la cónica es hiperbólica ($a<0$, $e>1$) y \emph{no hay afelio finito}. La inclinación, en eclíptica J2000, se calcula mediante
+\begin{equation}
+i=\arccos\left(\frac{h_z}{\lVert\vect h\rVert}\right).
+\end{equation}
+Los elementos calculados durante el encuentro se llaman \emph{osculatrices}: representan la cónica instantánea asociada al estado, no una trayectoria exacta si hay perturbaciones.
+
+\subsection{Dispersión hiperbólica por gravitación}
+En el sobrevuelo jovicéntrico ideal, la energía relativa es positiva y puede definirse la rapidez asintótica por
+\begin{equation}
+\varepsilon_J=\frac12w^2-\frac{\muJ}{\rho}>0,
+\qquad v_\infty=\sqrt{2\varepsilon_J}.
+\end{equation}
+Del momento angular $h_J=\rho\,w_\perp$, muy lejos de Júpiter se obtiene el parámetro de impacto
+\begin{equation}\label{eq:b}
+b=\frac{h_J}{v_\infty}.
+\end{equation}
+A partir de la energía y del momento angular,
+\begin{equation}\label{eq:ecc}
+e=\sqrt{1+\frac{2\varepsilon_J h_J^2}{\muJ^2}},\qquad
+r_p=\frac{h_J^2}{\muJ(1+e)}.
+\end{equation}
+Las asíntotas de la hipérbola satisfacen $\cos\nu_\infty=-1/e$. El cambio de dirección entre las velocidades asintóticas es
+\begin{equation}\label{eq:gamma}
+\gamma=2\arcsin\left(\frac1e\right)=2\arctan\left(\frac{\muJ}{bv_\infty^2}\right).
+\end{equation}
+Según Berg~\cite{berg2023}, ecuaciones (26)--(27), se define el parámetro adimensional
+\begin{equation}\label{eq:D}
+D=\frac{\muJ}{b v_\infty^2},\qquad \gamma=2\arctan D.
+\end{equation}
+Así, $D\ll1$ representa una dispersión débil y $D\gg1$ una gran desviación. Es importante separar $\gamma$, \emph{ángulo entre asíntotas}, del giro medido entre velocidades sobre la \emph{frontera finita} de la SOI: estas cantidades no tienen por qué coincidir.
+
+\subsection{Por qué una sonda gana energía heliocéntrica}
+Sean $\vect w_-$ y $\vect w_+$ las velocidades relativas a Júpiter antes y después del sobrevuelo, tomadas suficientemente lejos del planeta, y sea $\vJ$ su velocidad heliocéntrica aproximadamente constante durante la maniobra corta. En esa aproximación,
+\begin{equation}
+\vect v_-=\vJ+\vect w_-,\qquad
+\vect v_+=\vJ+\vect w_+,\qquad |\vect w_-|=|\vect w_+|=v_\infty.
+\end{equation}
+Por tanto, la diferencia de energía cinética heliocéntrica específica es
+\begin{align}\label{eq:transfer}
+\Delta K_\odot
+&=\frac12|\vect v_+|^2-\frac12|\vect v_-|^2\\
+&=\vJ\cdot(\vect w_+-\vect w_-)
++\frac12\bigl(|\vect w_+|^2-|\vect w_-|^2\bigr)\\
+&=\boxed{\vJ\cdot(\vect w_+-\vect w_-)}.
+\end{align}
+La sonda puede ganar energía heliocéntrica porque Júpiter está en movimiento; en un tratamiento de masas finitas se intercambian cantidades muy pequeñas de energía y momento con el planeta. Esto \textbf{no viola} la conservación de la energía del sistema físico completo.
+
+Berg~\cite{berg2023} introduce la geometría plana con la rapidez planetaria $u_p$, la rapidez asintótica relativa $u_i$, el ángulo jovicéntrico de entrada $\beta$ y el giro $\gamma$. La ecuación (32) del artículo equivale a
+\begin{multline}\label{eq:berg32}
+\Delta u=\sqrt{u_p^2+u_i^2-2u_pu_i\cos(\beta+\gamma)}\\
+-\sqrt{u_p^2+u_i^2-2u_pu_i\cos\beta}.
+\end{multline}
+Usando
+\begin{equation}
+\cos\gamma=\frac{1-D^2}{1+D^2},\qquad
+\sin\gamma=\frac{2D}{1+D^2},
+\end{equation}
+se transforma la ecuación~\eqref{eq:berg32} en la ecuación (37) de Berg,
+\begin{multline}\label{eq:berg37}
+\Delta u=\Biggl[u_p^2+u_i^2-2u_pu_i\left(
+\frac{1-D^2}{1+D^2}\cos\beta-\frac{2D}{1+D^2}\sin\beta\right)\Biggr]^{1/2}\\
+-\sqrt{u_p^2+u_i^2-2u_pu_i\cos\beta}.
+\end{multline}
+Para relacionar la entrada heliocéntrica con la jovicéntrica (ecuaciones (39)--(42)), el plano se orienta con eje tangencial al movimiento de Júpiter y eje radial:
+\begin{align}
+u'_{m,x}&=u'_m\sin\alpha,& u_{m,x}&=u'_{m,x}-u_p,\\
+u_i&=\sqrt{u_{m,x}^2+(u'_m\cos\alpha)^2},&
+\cos\beta&=\frac{|u_{m,x}|}{u_i}.
+\end{align}
+\textbf{Advertencia de validación:} estas expresiones suponían una orientación concreta del giro, un plano de dispersión y velocidad planetaria aproximadamente tangencial. En el código se comprueban además las velocidades asintóticas \emph{vectoriales 3D} y la ganancia entre superficies finitas de la SOI. No se debe obligar a que estas cuatro evaluaciones sean exactamente iguales.
+
+\subsection{Esfera de influencia: Laplace y Hill}
+La aproximación de cónicas empalmadas necesita una frontera convencional. Se adopta el radio de Laplace,
+\begin{equation}\label{eq:soi}
+\SOI=a_J\left(\frac{M_J}{M_\odot}\right)^{2/5},
+\end{equation}
+obtenido en el tratamiento clásico de la dominancia de perturbaciones relativas. Como escala alternativa se calcula el radio de Hill para una órbita aproximadamente circular,
+\begin{equation}\label{eq:hill}
+R_{\mathrm{Hill}}=a_J\left(\frac{M_J}{3M_\odot}\right)^{1/3}.
+\end{equation}
+Con las constantes declaradas,
+\begin{equation}
+\SOI=48\,219\,247.59\ \mathrm{km},\qquad
+R_{\mathrm{Hill}}=53\,152\,808.54\ \mathrm{km}
+\quad (R_{\mathrm{Hill}}/\SOI\approx1.1023).
+\end{equation}
+Ninguno de los radios representa una superficie física abrupta donde desaparezca exactamente la influencia solar. Por ello se realiza un estudio de sensibilidad para distintos radios de empalme.
+
+\section{Formulación del Modelo 1: cónicas empalmadas}
+\subsection{Estado de entrada y cambio de marco}
+La distancia real de la sonda a Júpiter se define por
+\begin{equation}
+d_J(t)=\bigl\lVert\rV^{\rm Horizons}(t)-\rJ^{\rm Horizons}(t)\bigr\rVert.
+\end{equation}
+El instante de entrada $t_{\rm in}$ se obtiene encontrando el primer cruce descendente $d_J(t)=\SOI$. Se inicializan las variables jovicéntricas en el cruce:
+\begin{equation}\label{eq:entry}
+\vect\rho(t_{\rm in})=\rV(t_{\rm in})-\rJ(t_{\rm in}),
+\quad \vect w(t_{\rm in})=\vV(t_{\rm in})-\vJ(t_{\rm in}).
+\end{equation}
+Para el segmento interior se integra \emph{únicamente}
+\begin{equation}\label{eq:model1}
+\dot{\vect\rho}=\vect w,
+\qquad
+\dot{\vect w}=-\frac{\muJ}{\rho^3}\vect\rho.
+\end{equation}
+El evento terminal de salida corresponde al primer cruce ascendente
+\begin{equation}
+g_{\rm out}(t)=\lVert\vect\rho(t)\rVert-\SOI=0,
+\quad \frac{\dif g_{\rm out}}{\dif t}>0.
+\end{equation}
+En el instante calculado $t_{\rm out}^{(1)}$ se transforman nuevamente las condiciones:
+\begin{equation}\label{eq:exit}
+\rV(t_{\rm out}^{(1)})=\rJ(t_{\rm out}^{(1)})+\vect\rho(t_{\rm out}^{(1)}),
+\quad
+\vV(t_{\rm out}^{(1)})=\vJ(t_{\rm out}^{(1)})+\vect w(t_{\rm out}^{(1)}).
+\end{equation}
+Se integran segmentos solares independientes antes y después del encuentro:
+\begin{equation}
+\ddot{\rV}=-\frac{\muS}{r^3}\rV.
+\end{equation}
+La trayectoria queda definida por tres soluciones empalmadas en $t_{\rm in}$ y $t_{\rm out}^{(1)}$. El estado de entrada es \emph{idéntico} para ambos modelos, mientras que sus fechas de salida pueden diferir y deben conservarse para interpretar el método.
+
+\subsection{Conservaciones de la región jovicéntrica}
+En el intervalo interior del Modelo 1, de la ecuación~\eqref{eq:model1} se deduce directamente
+\begin{equation}\label{eq:inv1}
+\boxed{\frac{\dif\varepsilon_J}{\dif t}=0,\qquad
+\frac{\dif\vect h_J}{\dif t}=\vect0},
+\quad
+\varepsilon_J=\frac12 w^2-\frac{\muJ}{\rho},\quad
+\vect h_J=\vect\rho\times\vect w.
+\end{equation}
+No se exige que la energía de Kepler alrededor del Sol sea constante \emph{durante} el segmento jovicéntrico, porque se está cambiando entre modelos y referencias. Tampoco se exige la continuidad de la aceleración en la frontera: sí son continuas posiciones y velocidades por construcción.
+
+\section{Formulación del Modelo 2: Sol, Júpiter y sonda}
+\subsection{Ecuación heliocéntrica restringida con término indirecto}
+El Modelo 2 no integra la evolución gravitatoria de todos los cuerpos desde condiciones iniciales propias. La trayectoria real de Júpiter, $\rJ(t)$, es una función prescrita por Horizons. Se propaga únicamente una sonda de masa despreciable. Debido a que el origen está ligado al Sol, debe introducirse la aceleración de ese origen por Júpiter, llamada \emph{término indirecto}:
+\begin{equation}\label{eq:model2}
+\boxed{\ddot{\rV}=
+-\muS\frac{\rV}{r^3}
+-\muJ\left[
+\frac{\rV-\rJ(t)}{|\rV-\rJ(t)|^3}
++\frac{\rJ(t)}{|\rJ(t)|^3}
+\right].}
+\end{equation}
+El primer término corresponde a la atracción solar, el segundo a la atracción \emph{directa} de Júpiter, y el tercero a la corrección indirecta por la aceleración del Sol. La sonda recibe ambas contribuciones en todo el intervalo; aquí \textbf{no existe una frontera de cambio de ecuación}.
+
+Si Júpiter fuese un primario dinámico del problema ideal de dos cuerpos Sol--Júpiter, la segunda ecuación sería
+\begin{equation}
+\ddot{\rJ}=-(\muS+\muJ)\frac{\rJ}{|\rJ|^3}.
+\end{equation}
+Pero en este proyecto $\rJ(t)$ se extrae de un sistema solar real y puede contener perturbaciones omitidas del modelo. La formulación es, por tanto, una \emph{aproximación restringida forzada por efemérides}, no una simulación autónoma completa de tres cuerpos.
+
+\subsection{Fuerza diferencial, marea solar y derivadas de invariantes}
+De $\vect\rho=\rV-\rJ$ se sigue
+\begin{align}\label{eq:rel_acc}
+\ddot{\vect\rho}
+&=-\muJ\frac{\vect\rho}{\rho^3}+\vect a_{\rm marea}+\vect\delta_a,\\
+\vect a_{\rm marea}
+&= -\muS\left(\frac{\rV}{r^3}-\frac{\rJ}{|\rJ|^3}\right),\\
+\vect\delta_a
+&=-\muS\frac{\rJ}{|\rJ|^3}
+-\muJ\frac{\rJ}{|\rJ|^3}
+-\ddot{\rJ}_{\rm Horizons}.
+\end{align}
+La corrección $\vect\delta_a$ cuantifica la diferencia entre la aceleración joviana coherente con el modelo ideal Sol--Júpiter y la aceleración de las efemérides prescritas. En una órbita planetaria ideal compatible, $\vect\delta_a=\vect0$.
+
+Para el Modelo 2, las variaciones de las cantidades jovicéntricas se obtienen sin aproximaciones adicionales a partir de la ecuación relativa:
+\begin{align}\label{eq:derivE}
+\boxed{\frac{\dif\varepsilon_J}{\dif t}=\vect w\cdot
+(\vect a_{\rm marea}+\vect\delta_a)},\\
+\boxed{\frac{\dif\vect h_J}{\dif t}=\vect\rho\times
+(\vect a_{\rm marea}+\vect\delta_a)}.
+\end{align}
+El cociente adimensional que se traza es el diagnóstico de marea \emph{solar} respecto a la gravedad joviana directa,
+\begin{equation}\label{eq:tidal}
+\eta(t)=\frac{|\vect a_{\rm marea}|}{\muJ/\rho^2}.
+\end{equation}
+Este cociente no incluye $\vect\delta_a$ y no es un criterio universal de validez por sí solo; además, las pequeñas perturbaciones integradas pueden producir grandes diferencias a largo plazo.
+
+Por su parte, la energía específica de Kepler heliocéntrica y el momento angular heliocéntrico satisfacen
+\begin{align}
+\varepsilon_\odot&=\frac12v^2-\frac{\muS}{r},
+&\frac{\dif\varepsilon_\odot}{\dif t}
+&=\vV\cdot\vect a_{J,\rm total},\\
+\vect h_\odot&=\rV\times\vV,
+&\frac{\dif\vect h_\odot}{\dif t}
+&=\rV\times\vect a_{J,\rm total},
+\end{align}
+con
+\begin{equation}
+\vect a_{J,\rm total}=-\muJ\left(
+\frac{\rV-\rJ}{|\rV-\rJ|^3}+\frac{\rJ}{|\rJ|^3}\right).
+\end{equation}
+Por tanto $\varepsilon_\odot$ y $\vect h_\odot$ tampoco son invariantes exactos del estado de la sonda bajo la fuerza combinada. No debe confundirse esta afirmación con la conservación total que tendría un \emph{sistema físico autónomo} de masas finitas.
+
+\subsection{Constante de Jacobi y alcance de la comprobación}
+En el \emph{problema restringido circular} de tres cuerpos, usando un sistema sinódico uniformemente rotante, existen un potencial efectivo $U_{\rm ef}$ y una constante
+\begin{equation}\label{eq:jacobi}
+C_J=2U_{\rm ef}(\vect r_{\rm rot})-\lVert\vect v_{\rm rot}\rVert^2.
+\end{equation}
+Para un sistema baricéntrico circular, con $\vect r_B,\vect v_B$ y velocidad angular constante $n\widehat{\vect n}$, esto se puede escribir en las variables inerciales baricéntricas como
+\begin{equation}\label{eq:cstar}
+C_J=2\left(\frac{\muS}{r_\odot}+\frac{\muJ}{r_J}\right)
+-\lVert\vect v_B\rVert^2+2n\,\widehat{\vect n}\cdot(\vect r_B\times\vect v_B),
+\end{equation}
+con las distancias a los dos primarios tomadas desde sus posiciones baricéntricas. En el código $\vect r_B=\vect r-\chi\rJ$, $\vect v_B=\vect v-\chi\vJ$ y $\chi=\muJ/(\muS+\muJ)$, usando un eje y velocidad angular de referencia construidos localmente. Como Horizons no representa exactamente una órbita circular uniforme de Sol--Júpiter, el valor calculado se llama $C^*(t)$, \emph{cuasi-Jacobi}, y se usa exclusivamente como diagnóstico. Una prueba separada con órbita circular consistente permite comprobar que la fórmula tiende a conservarse en el caso ideal.
+
+\section{Procedimiento computacional completo}
+\subsection{Lectura y sincronización de JPL Horizons}
+Los únicos archivos necesarios son \texttt{horizons\_jupiter.csv} y \texttt{horizons\_voyager-2.csv}. La rutina \texttt{horizons\_csv} acepta tanto el formato tabular limpio como la exportación con marcadores \texttt{\$\$SOE} y \texttt{\$\$EOE}. Comprueba el encabezado cuando está disponible: \emph{centro Sol}, \emph{unidades KM-S} y \emph{eclíptica J2000}. Se rechazan fechas inconsistentes.
+
+Para interpolar \emph{posición y velocidad de forma compatible}, se utiliza un spline cúbico de Hermite, no dos interpoladores independientes. Para cada componente de posición entre dos muestras $t_k,t_{k+1}$, con $s=(t-t_k)/\Delta t$, se interpola
+\begin{multline}\label{eq:hermite}
+r(t)=(2s^3-3s^2+1)r_k+ (s^3-2s^2+s)\Delta t\,v_k\\
++(-2s^3+3s^2)r_{k+1}+(s^3-s^2)\Delta t\,v_{k+1},
+\end{multline}
+con $v(t)=\dif r/\dif t$. Este método preserva los valores y derivadas tabulados pero no inventa precisión física superior a la cadencia original de Horizons.
+
+\subsection{Eventos geométricos: entrada, periapsis, salida y radio objetivo}
+Primero se detectan índices donde $d_J-\SOI$ cambia de positivo a negativo para la entrada y viceversa para la salida. Cada cruce se refina mediante \texttt{brentq}; la fecha de máxima aproximación se calcula minimizando $d_J(t)$ con \texttt{minimize\_scalar} en el intervalo de la SOI. Para la proyección se busca el primer cruce ascendente de
+\begin{equation}
+g_{\rm obj}(t)=\lVert\rV(t)\rVert-R_{\rm obj},\quad
+R_{\rm obj}=9.58\times149\,597\,870.7\ \mathrm{km}.
+\end{equation}
+Este evento no comprueba fase angular ni posición de Saturno, pues ese planeta no forma parte del modelo.
+
+\subsection{Integración ODE y tolerancias}
+En ambos modelos se escribe un sistema de primer orden de seis variables $\vect y=(x,y,z,v_x,v_y,v_z)$ y se usa \texttt{scipy.integrate.solve\_ivp} con \texttt{method='DOP853'} (Runge--Kutta explícito de orden alto), \texttt{dense\_output=True}, $\mathrm{rtol}=3\times10^{-10}$ y tolerancias absolutas separadas para posición $10^{-3}\,\mathrm{km}$ y velocidad $2\times10^{-11}\,\mathrm{km/s}$. El paso máximo nominal es de $0.75$ días; el integrador acorta automáticamente los pasos cerca del periapsis.
+
+\begin{lstlisting}[caption={Ecuaciones de propagación: código abreviado, idéntico a las fuerzas usadas.}]
+def solar_rhs(phys):
+    def f(t, y):
+        r, v = y[:3], y[3:]
+        return np.r_[v, -phys.mu_sun*r / np.linalg.norm(r)**3]
+    return f
+
+def jovian_rhs(phys):
+    def f(t, y):
+        rho, w = y[:3], y[3:]
+        return np.r_[w, -phys.mu_jupiter*rho / np.linalg.norm(rho)**3]
+    return f
+
+def planet_rhs(phys, eph):
+    def f(t, y):
+        r, v = y[:3], y[3:]
+        rj = eph["jupiter"].state(t).r
+        rho = r-rj
+        a = -phys.mu_sun*r/np.linalg.norm(r)**3
+        a -= phys.mu_jupiter*(rho/np.linalg.norm(rho)**3
+                               + rj/np.linalg.norm(rj)**3)
+        return np.r_[v, a]
+    return f
+\end{lstlisting}
+\textbf{Nota:} el listado muestra las ecuaciones físicas de manera legible; las funciones ejecutables, la gestión de eventos y el programa \emph{completo} están incorporados en el cuaderno y disponibles en \texttt{asistencia\_gravitacional\_sol\_jupiter.py}.
+
+\subsection{Esquema de flujo y relación con funciones Python}
+\begin{enumerate}
+\item \texttt{synchronize\_data}: leer únicamente Júpiter y Voyager y verificar mismo intervalo y malla temporal de Horizons.
+\item \texttt{encounter\_real}: localizar $t_{\rm in}$, $t_{\rm peri}$ y $t_{\rm out}$ a partir de $d_J(t)$ y $\SOI$.
+\item \texttt{conics\_orbit}: anclar el mismo estado de entrada y construir los tres arcos del Modelo 1: solar anterior, jovicéntrico, solar posterior.
+\item \texttt{forced\_orbit}: con la misma entrada, integrar la ecuación~\eqref{eq:model2} hacia atrás y hacia adelante sin empalmes físicos.
+\item \texttt{hyperbola\_geometry}: calcular $\varepsilon_J,h_J,v_\infty,b,e,D,\gamma,r_p$ a partir del estado jovicéntrico de entrada.
+\item \texttt{berg\_parameters}: trasladar asintotas relativas a base tangencial--radial, calcular $\alpha$, $\beta$ y las ecuaciones (32), (37) y la comparación 3D.
+\item \texttt{two\_body\_invariants}, \texttt{tidal\_ratio}, \texttt{jacobi\_proxy}: generar diagnósticos de conservación y perturbación.
+\item \texttt{sensitivity\_study}: recalcular la entrada para distintos radios SOI y repetir ambas propagaciones con la \emph{misma} condición inicial en cada experimento.
+\item \texttt{first\_radius\_time}: encontrar el primer cruce de $9.58\,\mathrm{UA}$ en cada modelo.
+\item \texttt{make\_plots}: exportar once figuras de Matplotlib; \texttt{plotly\_animation\_2d} exporta el visor 2D; \texttt{generar\_panel3d} exporta las vistas interactivas jovicéntrica y heliocéntrica por Canvas 2D, sin WebGL.
+\item \texttt{main}: escribir archivos CSV, resumen JSON y resultados, y mostrar verificaciones. El cuaderno Colab agrupa los productos en un ZIP descargable \emph{desde Colab}.
+\end{enumerate}
+
+\subsection{Definición de error y comparación en el mismo instante}
+Para dos estados calculados en una misma época $t$ se utiliza
+\begin{equation}
+\delta_r(t)=\lVert\rV_1(t)-\rV_2(t)\rVert,
+\qquad \delta_v(t)=\lVert\vV_1(t)-\vV_2(t)\rVert.
+\end{equation}
+Frente a Horizons se define de modo análogo $\delta_r^{\rm real}$ y $\delta_v^{\rm real}$. Si el Modelo 1 sale de la SOI antes que el Modelo 2, sus estados se evalúan \emph{ambos a la fecha de salida del Modelo 1}; no se deben restar dos posiciones tomadas en tiempos diferentes. El error de proyección se evalúa también en la misma \emph{fecha real de cruce} del radio $9.58$ UA. Las diferencias M1--M2 son el efecto de cambiar las ecuaciones aproximadas; las diferencias frente a Horizons también reflejan fuerzas que los modelos simplificados omiten.
+
+\subsection{Sensibilidad al radio de empalme}
+Se repite el procedimiento para
+\begin{equation}
+R_{\rm empalme}=f\,\SOI,
+\quad f\in\left\{0.50,0.65,0.80,1.00,\frac{R_{\rm Hill}}{\SOI}\right\}.
+\end{equation}
+En cada caso se determina una nueva fecha de entrada sobre Horizons y se inicializan ambos modelos con \emph{ese mismo estado real}. La comparación no equivale a controlar todos los errores físicos, pero permite aislar la sensibilidad del esquema de cónicas empalmadas ante una decisión convencional del analista.
+
+\section{Resultados obtenidos con los archivos del proyecto}
+\subsection{Reconstrucción del encuentro real}
+Los valores obtenidos con los CSV de Horizons y la interpolación Hermite son:
+\begin{center}\begin{tabular}{ll}\toprule
+Magnitud & Resultado\\\midrule
+Entrada SOI Laplace & 6 de mayo de 1979, 11:34:09 TDB\\
+Periapsis interpolado & 9 de julio de 1979, 22:26:54 TDB\\
+Distancia mínima interpolada & $720\,894$ km\\
+Salida SOI real & 12 de septiembre de 1979, 20:40:14 TDB\\
+SOI Laplace / Hill & $48.219$ / $53.153$ millones de km\\
+Cruce real de $9.58$ UA & 23 de agosto de 1981, 07:21:45 TDB\\
+\bottomrule\end{tabular}\end{center}
+El valor de periapsis depende de la interpolación y de la cadencia de los registros. No se presenta como una reconstrucción de navegación de alta precisión de la misión.
+
+\subsection{Elementos heliocéntricos: antes y después}
+Los elementos de la sonda reconstruidos a partir de Horizons en las fronteras reales de Laplace son:
+\begin{center}\begin{tabular}{lrr}\toprule
+Magnitud & Antes de la SOI & Después de la SOI\\\midrule
+Energía específica $\varepsilon_\odot$ ($\mathrm{km^2/s^2}$) & $-121.446$ & $30.091$\\
+Semieje mayor osculatriz $a$ (UA) & $3.652$ & $-14.741$\\
+Excentricidad $e$ & $0.7371$ & $1.3406$\\
+Afelio (UA) & $6.345$ & no existe\\
+Inclinación eclíptica $i$ (grados) & $5.1205$ & $2.5799$\\\bottomrule\end{tabular}\end{center}
+En la entrada el afelio osculatriz solar es inferior a $9.58\,\mathrm{UA}$; al salir, la cónica solar osculatriz es abierta ($\varepsilon_\odot>0$). Esto muestra la posibilidad de viajar a radios mayores sin impulso propulsivo adicional, siempre que se tenga en cuenta el movimiento de Júpiter.
+
+\subsection{Parámetros analíticos de la hipérbola}
+En el estado de entrada de Laplace:
+\begin{center}\begin{tabular}{ll}\toprule
+Parámetro & Valor\\\midrule
+$\varepsilon_J$ & $29.43869\ \mathrm{km^2/s^2}$\\
+$h_J$ & $1.269885\times10^7\ \mathrm{km^2/s}$\\
+$v_\infty$ & $7.67316\ \mathrm{km/s}$\\
+$b$ & $1\,654\,970\ \mathrm{km}$\\
+$D$ & $1.300145$\\
+Excentricidad $e_J$ & $1.26158$\\
+Giro asintótico $\gamma$ & $104.869^\circ$\\
+Periapsis de la cónica osculatriz & $562\,842\ \mathrm{km}$\\
+$\alpha$ y $\beta$ proyectados según Berg & $53.337^\circ$ y $51.499^\circ$\\
+Ganancia Berg (32) y (37) & $10.0076\ \mathrm{km/s}$\\
+Ganancia asintótica vectorial 3D & $9.7525\ \mathrm{km/s}$\\\bottomrule\end{tabular}\end{center}
+El periapsis de la hipérbola osculatriz pura difiere del periapsis de las efemérides reales: ello ilustra el efecto de fuerzas no incluidas en la aproximación. El ángulo de $104.869^\circ$ corresponde a la \emph{cónica jovicéntrica osculatriz en la SOI}, no al ángulo histórico nominal de unos $80^\circ$ mencionado por Berg como aproximación geométrica; no deben identificarse sin revisar las definiciones y condiciones iniciales.
+
+\subsection{Ejemplo completo de sustitución numérica}
+Para mostrar de dónde surgen los valores y permitir reproducirlos manualmente, tomamos el estado relativo \emph{interpolado} en $t_{\rm in}$ y las constantes de Júpiter. El código calcula primero
+\begin{align*}
+\varepsilon_J &=\frac12\lVert\vect w_0\rVert^2-\frac{\muJ}{\lVert\vect\rho_0\rVert}
+ \approx29.43869\ \mathrm{km^2/s^2},\\
+h_J&=\lVert\vect\rho_0\times\vect w_0\rVert
+ \approx1.269885\times10^7\ \mathrm{km^2/s}.
+\end{align*}
+Una vez obtenidos estos \emph{dos invariantes osculatrices} se suceden las sustituciones
+\begin{align*}
+v_\infty&=\sqrt{2(29.43869)}\approx7.67316\ \mathrm{km/s},\\
+b&=\frac{1.269885\times10^7}{7.67316}
+ \approx1.65497\times10^6\ \mathrm{km},\\
+D&=\frac{1.26686534\times10^8}{(1.65497\times10^6)(7.67316)^2}
+ \approx1.300145,\\
+\gamma&=2\arctan(1.300145)\approx104.869^\circ,\\
+e_J&=\sqrt{1+\frac{2(29.43869)(1.269885\times10^7)^2}
+ {(1.26686534\times10^8)^2}}\approx1.26158,\\
+r_{p,\mathrm{osc}}&=\frac{(1.269885\times10^7)^2}{
+(1.26686534\times10^8)(1+1.26158)}\approx5.62842\times10^5\ \mathrm{km}.
+\end{align*}
+El mismo procedimiento aplicado a cada estado heliocéntrico de Horizons da
+\begin{align*}
+ a_{\rm antes}&=-\frac{\muS}{2\varepsilon_{\odot,\rm antes}}
+ =-\frac{1.32712440018\times10^{11}}{2(-121.446)}
+ \approx 5.464\times10^8\ \mathrm{km}\approx3.652\ \mathrm{UA},\\
+ r_{a,\rm antes}&=a_{\rm antes}(1+e_{\rm antes})
+ \approx3.652(1+0.7371)=6.345\ \mathrm{UA},\\
+ a_{\rm despues}&=-\frac{1.32712440018\times10^{11}}{2(30.0909)}
+ \approx-14.741\ \mathrm{UA},\\
+ \Delta\varepsilon_\odot&=\varepsilon_{\odot,\rm despues}-
+ \varepsilon_{\odot,\rm antes}
+ =30.0909-(-121.4460)\approx151.537\ \mathrm{km^2/s^2}.
+\end{align*}
+Estos cálculos son \emph{instantáneos u osculatrices}; las posiciones, velocidades, cruces y errores a fechas posteriores requieren la propagación numérica. Las cifras redondeadas aquí no deben reemplazar los valores de doble precisión usados por el código.
+
+\subsection{Cuantificación de los dos modelos}
+Los dos modelos empiezan en la misma época y estado de entrada. Para cada uno se mide la energía entre esa entrada y su \emph{propia} salida, y el error respecto a Horizons se calcula en esa misma fecha de salida:
+\begin{center}\begin{tabular}{lrr}\toprule
+Resultado & Modelo 1 & Modelo 2\\\midrule
+$\Delta\varepsilon_\odot$ ($\mathrm{km^2/s^2}$) & $160.4714$ & $152.2056$\\
+Error de posición al salir (km) & $6\,845\,903$ & $469\,583$\\
+Error de velocidad al salir ($\mathrm{km/s}$) & $1.1256$ & $0.08715$\\
+Cruce radial de $9.58$ UA & 10--08--1981 & 19--08--1981\\\bottomrule\end{tabular}\end{center}
+Para comparación, Horizons da $\Delta\varepsilon_\odot\approx151.537\,\mathrm{km^2/s^2}$ entre \emph{sus propias} fronteras. La coincidencia de energía no es una prueba suficiente de exactitud orbital: se deben verificar también vector posición y vector velocidad.
+
+\subsection{¿Qué se conserva realmente?}
+En el Modelo 1, calculando la diferencia extrema de energía jovicéntrica dentro del tramo de dos cuerpos y las variaciones relativas del momento angular vectorial,
+\begin{equation}
+\operatorname{rango}(\varepsilon_J)\approx6.57\times10^{-8}\ \mathrm{km^2/s^2},
+\quad \max_t\frac{|\vect h_J(t)-\vect h_J(0)|}{|\vect h_J(0)|}
+\approx1.15\times10^{-10}.
+\end{equation}
+Son residuos de integración numérica. En el Modelo 2 la variación total de $\varepsilon_J$ en la ventana común llega a $0.275\,\mathrm{km^2/s^2}$ y el cambio relativo vectorial máximo de $\vect h_J$ es cercano a $15.2\%$. Estas variaciones son físicas dentro del modelo forzado y reflejan la presencia de aceleraciones no centrales jovicéntricas. No indican que se pierda energía en el universo.
+
+El cociente $\eta$ de la ecuación~\eqref{eq:tidal} varía en la ventana analizada entre $7.76\times10^{-7}$ y $0.4267$. La perturbación relativa es muy pequeña cerca del planeta, pero considerable en la periferia de la SOI. Los umbrales ilustrativos $\delta_r\geq10^3\,\mathrm{km}$, $\delta_r\geq10^5\,\mathrm{km}$ y $\delta_v\geq0.1\,\mathrm{km/s}$ aparecen aproximadamente el 9 de mayo, 12 de junio y 4 de julio de 1979, respectivamente. \emph{Son convenciones diagnósticas, no un instante universal de ruptura de equivalencia.}
+
+\subsection{Resultados del estudio de sensibilidad}
+\begin{center}\begin{tabular}{rrr}\toprule
+Radio $f\,\SOI$ & Error M1--M2 a salida (millones km) & Diferencia proyectada a 9.58 UA (millones km)\\\midrule
+$0.50$ & $0.374$ & $39.358$\\
+$0.65$ & $1.182$ & $32.296$\\
+$0.80$ & $2.771$ & $40.280$\\
+$1.00$ & $7.190$ & $76.182$\\
+Hill ($1.102$) & $10.598$ & $102.087$\\\bottomrule\end{tabular}\end{center}
+El error proyectado mínimo de este conjunto discreto se obtiene para $f=0.65$; no hay garantía de que sea un óptimo físico universal, ni necesariamente el mejor valor para otro objetivo, época o sistema.
+
+\subsection{Figuras del cálculo}\label{sec:figuras}
+\fign{01_trayectoria_jovicentrica.png}{.96}{Reconstrucción de la trayectoria cerca de Júpiter para Horizons, cónicas empalmadas y propagación simultánea.}
+\fign{04_invariantes_energia_momento.png}{.96}{Energías específicas y momentos angulares en los dos marcos de referencia.}
+\fign{06_marea_y_error.png}{.90}{Relación entre marea solar, aceleración joviana y divergencia de los modelos.}
+\fign{08_trayectoria_radio_objetivo.png}{.85}{Proyección heliocéntrica; $9.58$ UA es un radio de referencia, no una órbita planetaria calculada.}
+\fign{10_sensibilidad_soi.png}{.93}{Errores frente a los distintos radios de empalme, comparados en tiempos comunes.}
+
+\section{Descripción y organización del código}
+El proyecto se puede ejecutar por completo en Google Colab sin modificar archivos de sistema ni recurrir a GPU. El cuaderno incluye el motor científico en una celda propia, el análisis, la generación de once figuras PNG, las tablas CSV, la animación Plotly 2D y dos HTML independientes con Canvas 2D. La cámara interactiva se centra de forma predeterminada en Júpiter; se puede seleccionar seguimiento de sonda o Sol, y trasladar la vista con \emph{Mayús + arrastre} o botón derecho. No se utiliza \texttt{go.Scatter3d}, que requeriría WebGL.
+
+\textbf{Arquitectura:} \texttt{Physics} agrupa parámetros físicos, \texttt{Settings} tolerancias y opciones, \texttt{Ephemeris} encapsula datos e interpolación, \texttt{State} describe cada estado físico, \texttt{Encounter} agrupa eventos geométricos, y \texttt{Orbit} evalúa tramos integrados. Funciones separadas implementan fuerzas, integraciones, métricas, diagnósticos y figuras. Los resultados se exportan en \texttt{comparacion\_modelos.csv}, \texttt{elementos\_osculatrices.csv}, \texttt{sensibilidad\_radio\_soi.csv}, \texttt{diagnosticos\_temporales.csv}, \texttt{resumen\_fisico.json} y \texttt{telemetria\_dashboard\_*.csv}.
+
+\textbf{Procedimiento reproducible en Colab:}
+\begin{enumerate}
+\item Abrir \texttt{Voyager2\_RetoIII3\_SOLO\_SOL\_JUPITER.ipynb}.
+\item Ejecutar la celda de dependencias y cargar únicamente los CSV de Júpiter y Voyager 2.
+\item Ejecutar la celda del motor físico, y después la celda de \texttt{main()}.
+\item Ejecutar las dos celdas de visualización HTML, una jovicéntrica y otra heliocéntrica.
+\item Ejecutar la última celda para generar un ZIP y \emph{descargarlo desde Colab}. El archivo LaTeX y su PDF de lectura pueden conservarse en la misma carpeta del proyecto y se incluyen como documentación externa.
+\end{enumerate}
+
+\subsection{Limitaciones y comprobaciones de consistencia}
+\begin{itemize}
+\item Las efemérides históricas de Horizons incluyen fuerzas y características dinámicas omitidas en los dos modelos; el error contra Horizons \emph{no mide exclusivamente} el error de cónicas empalmadas. Para comparar aproximaciones en igualdad de condiciones, también se computa M1--M2.
+\item El movimiento de Júpiter se toma de Horizons, mientras el modelo de la sonda solo incorpora gravedad solar y joviana. Esto es una aproximación forzada, no una integración simultánea autoconsistente de todas las masas.
+\item Se trata el Sol como centro heliocéntrico con corrección indirecta; esta corrección evita mezclar sin aviso un origen acelerado con ecuaciones inerciales.
+\item El parámetro de SOI y la malla temporal son decisiones de modelado. Las fechas subdiarias calculadas por interpolación no deben confundirse con mediciones originales diarias.
+\item La conservación de Jacobi requiere una órbita circular coherente y un sistema rotante uniforme. Con efemérides reales solo se grafica $C^*(t)$ aproximada; una autoprueba con órbita circular ideal recupera deriva relativa del orden de $10^{-10}$.
+\item Cruzar el radio $9.58\,\mathrm{UA}$ no prueba una cita orbital con Saturno. No se usan ni su posición ni su gravedad en el proyecto final.
+\end{itemize}
+
+\section{Conclusiones}
+\begin{enumerate}[label=\textbf{\arabic*.}]
+\item La dispersión por fuerza central proporciona una comprensión analítica del encuentro: la dirección de la velocidad relativa cambia con un giro que depende de $D=\muJ/(bv_\infty^2)$; su energía relativa y el momento angular vectorial se conservan en la descripción jovicéntrica de dos cuerpos.
+\item La asistencia gravitacional no genera energía de la nada. El cambio de rapidez heliocéntrica proviene de la transformación de velocidades y del intercambio de energía orbital con Júpiter: $\Delta K_\odot\simeq\vJ\cdot(\vect w_+-\vect w_-)$.
+\item El Modelo 1 reproduce el mecanismo esencial con un costo numérico bajo y conserva $\varepsilon_J$ y $\vect h_J$ en el segmento de la SOI. Sin embargo, su hipótesis elimina la marea solar durante un intervalo largo, lo que se acumula como error de trayectoria.
+\item El Modelo 2, limitado a Sol--Júpiter--sonda, reproduce mejor las efemérides reales de salida: aproximadamente $0.470$ millones de km de error posicional frente a $6.846$ millones de km para el Modelo 1. La discrepancia no se explica por el integrador, sino principalmente por el modelo físico empleado.
+\item No existe un instante único y universal cuando las aproximaciones ``dejan de ser equivalentes''. La respuesta depende de la tolerancia de error aceptable, del radio de empalme, de la duración de la predicción y de la magnitud comparada.
+\item La energía heliocéntrica osculatriz se vuelve positiva después del paso joviano y la trayectoria alcanza el radio geométrico $9.58\,\mathrm{UA}$. Este resultado satisface la condición radial pedida sin introducir interacciones gravitatorias adicionales.
+\end{enumerate}
+
+\section{Referencias}
+\begin{thebibliography}{9}
+\bibitem{berg2023} P. Berg, ``The fundamental concepts of the gravity-assist manoeuvre'', \emph{European Journal of Physics}, vol.~44, art.~025002, 2023. DOI: \href{https://doi.org/10.1088/1361-6404/acaad8}{10.1088/1361-6404/acaad8}. Se utilizó la traducción al español suministrada para el proyecto, especialmente secciones 2--5 y ecuaciones (26)--(27), (32), (37), (39)--(42).
+\bibitem{horizons} NASA/JPL, \emph{Horizons On-Line Ephemeris System}. Archivos CSV históricos de Júpiter y Voyager 2 aportados para este proyecto; marco de referencia y unidades según sus encabezados.
+\bibitem{scipy} SciPy, documentación de \texttt{solve\_ivp} (método DOP853), \texttt{CubicHermiteSpline} y \texttt{brentq}; implementaciones utilizadas por el programa.
+\end{thebibliography}
+\end{document}

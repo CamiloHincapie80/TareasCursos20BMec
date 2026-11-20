@@ -1,0 +1,85 @@
+{
+  "marco": "Heliocéntrico, eclíptica J2000, KM-S, TDB",
+  "modelo2": "Sonda restringida Sol+Júpiter, efemérides prescritas de Júpiter; no autónomo",
+  "laplace_km": 48219247.593912095,
+  "hill_km": 53152808.54481874,
+  "encuentro_real": {
+    "entrada": "1979-05-06 11:34:09 TDB",
+    "periapsis": "1979-07-09 22:26:54 TDB",
+    "salida": "1979-09-12 20:40:14 TDB",
+    "distancia_minima_km": 720894.4165098122
+  },
+  "objetivo_geometrico": {
+    "radio_ua": 9.58,
+    "cruce_real_9_58_ua": "1981-08-23 07:21:45 TDB",
+    "comentario": "Radio fijo de referencia; no hay efemérides ni gravedad de Saturno"
+  },
+  "hiperbola": {
+    "energia_j": 29.4386878817139,
+    "h": 12698849.053546177,
+    "b": 1654970.0492853175,
+    "D": 1.3001452426897417,
+    "vinf": 7.673159438160255,
+    "e": 1.261579874355453,
+    "gamma_deg": 104.86900271486546,
+    "rp": 562841.7913767168
+  },
+  "berg": {
+    "alpha_deg": 53.337252539692024,
+    "beta_deg": 51.49924280590567,
+    "up": 12.78542179767414,
+    "ui_berg": 7.638152759829365,
+    "gamma_deg": 104.86900271486546,
+    "dU_32": 10.007558099625836,
+    "dU_37": 10.007558099625836,
+    "dU_vector_2d": 10.019012198265596,
+    "dU_vector_3d": 9.752494704390855,
+    "berg_orientation_valid": true,
+    "signed_rotation_indicator": -56.60536219347093
+  },
+  "conservacion": {
+    "Modelo 1": {
+      "max_abs_delta_epsJ_km2_s2": 6.572508937097155e-08,
+      "max_relative_norm_hJ": 1.1486944728744675e-10,
+      "max_relative_vector_hJ": 1.1486943509009173e-10
+    },
+    "Modelo 2: Sol+Júpiter": {
+      "max_abs_delta_epsJ_km2_s2": 0.2751570563672594,
+      "max_relative_norm_hJ": 0.15172471002770838,
+      "max_relative_vector_hJ": 0.15215415064367588
+    }
+  },
+  "divergencia": {
+    "primer_error_posicion_superior_a_1000_km": "1979-05-09 12:24:24 TDB",
+    "primer_error_posicion_superior_a_100000_km": "1979-06-12 06:01:23 TDB",
+    "primer_error_velocidad_superior_a_0p1_kms": "1979-07-04 07:29:44 TDB",
+    "nota": "Umbrales ilustrativos, NO frontera física universal de validez"
+  },
+  "cuasi_jacobi": {
+    "Modelo 1": {
+      "C_inicio": 430.6736386562127,
+      "delta_C_max": 18.079479016027392
+    },
+    "Modelo 2: Sol+Júpiter": {
+      "C_inicio": 430.6736386562127,
+      "delta_C_max": 15.190091194946774
+    }
+  },
+  "autoprueba_jacobi_circular_deriva_relativa": 1.5563436504732677e-10,
+  "razon_marea_min": 7.764320171711238e-07,
+  "razon_marea_max": 0.42674401732082784,
+  "archivos_graficas": [
+    "01_trayectoria_jovicentrica.png",
+    "02_distancia_jupiter.png",
+    "03_rapideces.png",
+    "04_invariantes_energia_momento.png",
+    "05_conservacion_vector_hj.png",
+    "06_marea_y_error.png",
+    "07_cuasi_jacobi.png",
+    "08_trayectoria_radio_objetivo.png",
+    "09_radio_objetivo_y_error.png",
+    "10_sensibilidad_soi.png",
+    "11_validacion_berg.png",
+    "13_animacion_encuentro_2d.html"
+  ]
+}
